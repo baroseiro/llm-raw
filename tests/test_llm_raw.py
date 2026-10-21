@@ -1245,18 +1245,23 @@ def test_cli_logging_writes_redacted_jsonl(
             "--no-stream",
             "--log-dir",
             str(log_dir),
+            "--api-key",
+            "super-secret-api-key",
         ]
     )
     assert code == 0
     capsys.readouterr()
     files = list(log_dir.glob("*.jsonl"))
     assert len(files) == 1
-    events = [json.loads(line) for line in files[0].read_text(encoding="utf-8").splitlines()]
+    raw_log = files[0].read_text(encoding="utf-8")
+    events = [json.loads(line) for line in raw_log.splitlines()]
     names = [event["event"] for event in events]
     assert "session_start" in names
     assert "request" in names
     assert "response" in names
-    assert "fake-model" in files[0].read_text(encoding="utf-8")
+    assert "fake-model" in raw_log
+    assert "super-secret-api-key" not in raw_log
+    assert "Authorization" not in raw_log
 
 
 def test_python_api_import_has_no_side_effects(tmp_path: Path) -> None:
