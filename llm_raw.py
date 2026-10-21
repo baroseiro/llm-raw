@@ -1328,11 +1328,16 @@ class HttpMCPClient(MCPClient):
                     self.session_id = session_id
                 content_type = response.headers.get("Content-Type", "").lower()
                 body = response.read().decode("utf-8", "replace")
+                status = response.status
         except urllib.error.HTTPError as exc:
             body = exc.read().decode("utf-8", "replace")
             raise MCPError(f"MCP {self.name} HTTP {exc.code}: {body[:500]}") from exc
         except urllib.error.URLError as exc:
             raise MCPError(f"MCP {self.name} connection failed: {exc.reason}") from exc
+        if not body.strip():
+            if payload.get("id") is not None:
+                raise MCPError(f"MCP {self.name}: empty response for request {payload.get('id')}")
+            return {"status": status}
         if "text/event-stream" in content_type:
             for line in body.splitlines():
                 line = line.strip()
@@ -1392,9 +1397,10 @@ class MCPManager:
             if not isinstance(raw, dict) or raw.get("enabled", True) is False:
                 continue
             transport = str(raw.get("transport") or ("stdio" if raw.get("command") else "http"))
+            client: MCPClient | None = None
             try:
                 if transport == "stdio":
-                    client: MCPClient = StdioMCPClient(
+                    client = StdioMCPClient(
                         str(name),
                         raw.get("command"),
                         raw.get("env") if isinstance(raw.get("env"), dict) else None,
@@ -1413,6 +1419,7 @@ class MCPManager:
                 client.initialize()
                 tools = client.list_tools()
                 self.clients[str(name)] = client
+                client = None
                 trust = bool(raw.get("trust", False))
                 for tool in tools:
                     tool_name = str(tool.get("name") or "")
@@ -1424,11 +1431,13 @@ class MCPManager:
                         description=str(tool.get("description") or ""),
                         input_schema=tool.get("inputSchema") if isinstance(tool.get("inputSchema"), dict) else {"type": "object"},
                         trust=trust,
-                        client=client,
+                        client=self.clients[str(name)],
                     )
                 if self.logger:
                     self.logger.log("mcp_server_started", server=name, tools=len(tools), transport=transport)
             except Exception as exc:
+                if client is not None:
+                    client.close()
                 self.errors.append(f"{name}: {exc}")
                 if self.logger:
                     self.logger.log("mcp_server_error", server=name, error=str(exc))
@@ -2278,7 +2287,10 @@ def main(argv: list[str] | None = None) -> int:
             api_key = os.environ.get(str(endpoint.get("api_key_env") or "LLM_API_KEY"))
         if api_key:
             secrets.append(str(api_key))
-        redactor = Redactor(config.get("security", {}).get("redact_patterns", []), secrets)
+        patterns = config.get("security", {}).get("redact_patterns", [])
+        if not config.get("logging", {}).get("redact", True):
+            patterns = []
+        redactor = Redactor(patterns, secrets)
         logger = None
         if config.get("logging", {}).get("enabled", True):
             log_dir = Path(str(config.get("logging", {}).get("directory", "./llm-raw-logs"))).expanduser()
