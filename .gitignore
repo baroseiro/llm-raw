@@ -1,0 +1,32 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments and uv
+.venv/
+.uv/
+.env
+
+# Build and distribution
+build/
+dist/
+*.egg-info/
+
+# Test and type-check caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Runtime artifacts
+llm-raw-logs/
+llm-raw-session-*.json
+*.jsonl
+
+# Editors and OS
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db

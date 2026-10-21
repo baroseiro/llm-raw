@@ -1,4 +1,4 @@
-# llm_raw.yaml - defaults for the portable raw LLM harness.
+# llm-raw.yaml - optional defaults for the llm-raw harness.
 # Environment variables can be referenced as ${NAME} or {env:NAME}.
 
 version: 1

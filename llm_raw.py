@@ -1,20 +1,23 @@
 #!/usr/bin/env python3
-"""llm_raw.py - portable raw OpenAI-compatible LLM harness.
+"""llm-raw: a small, transparent harness for OpenAI-compatible LLM endpoints.
 
-This file is intentionally standalone: copy it and llm_raw.yaml to another
-project and it runs without this skill. It provides:
+The runtime is intentionally one file. Copy ``llm_raw.py`` and, optionally,
+``llm-raw.yaml`` into a directory and run it with Python 3.10 or newer.
+
+Features:
 
 - streaming and non-streaming chat against an OpenAI-compatible endpoint
-- raw request/response JSONL logging
-- context compaction
-- MCP tool clients (stdio and HTTP)
-- local skill discovery/loading
+- raw request/response JSONL logging with secret redaction
+- token usage, latency, TTFT, and throughput metrics
+- multi-turn sessions with automatic context compaction
+- MCP tool clients over stdio and HTTP
+- optional local Markdown instruction packs ("skills")
 - human-in-the-loop tool approval
-- security policy and redaction
-- an interactive terminal UI
+- a security policy layer
+- a line-oriented interactive terminal UI
 
-The evaluation suite (eval_llm.py) imports this module for the low-level
-transport, while keeping its quality/performance logic separate.
+The distribution and command name is ``llm-raw``. The import name is
+``llm_raw`` because Python module names cannot contain hyphens.
 """
 
 from __future__ import annotations
@@ -47,8 +50,10 @@ for _stream in (sys.stdout, sys.stderr):
         except Exception:
             pass
 
-VERSION = "0.1.0"
-DEFAULT_CONFIG = Path(__file__).with_name("llm_raw.yaml")
+VERSION = "0.2.0"
+CONFIG_NAME = "llm-raw.yaml"
+CONFIG_ENV = "LLM_RAW_CONFIG"
+MODULE_DIR = Path(__file__).resolve().parent
 RETRYABLE_HTTP = {408, 409, 425, 429, 500, 502, 503, 504}
 TOOL_NAME_RE = re.compile(r"[^A-Za-z0-9_-]+")
 
@@ -375,9 +380,28 @@ DEFAULT_CONFIG_DATA: dict[str, Any] = {
 }
 
 
+def default_config_path() -> Path:
+    """Resolve the default config: env, current directory, then module directory.
+
+    A missing default file is not an error; built-in defaults always apply.
+    """
+    env_path = os.environ.get(CONFIG_ENV)
+    if env_path:
+        return Path(env_path).expanduser()
+    local = Path.cwd() / CONFIG_NAME
+    if local.is_file():
+        return local
+    return MODULE_DIR / CONFIG_NAME
+
+
 def load_config(path: Path | None = None) -> dict[str, Any]:
     config = copy.deepcopy(DEFAULT_CONFIG_DATA)
-    target = path or DEFAULT_CONFIG
+    if path is not None:
+        target = Path(path).expanduser()
+        if not target.exists():
+            raise ConfigError(f"Config file not found: {target}")
+    else:
+        target = default_config_path()
     if target.exists():
         loaded = load_yaml(target)
         config = deep_merge(config, loaded)
@@ -1140,7 +1164,7 @@ class MCPClient:
             {
                 "protocolVersion": "2024-11-05",
                 "capabilities": {},
-                "clientInfo": {"name": "llm_raw", "version": VERSION},
+                "clientInfo": {"name": "llm-raw", "version": VERSION},
             },
         )
         self.notify("notifications/initialized", {})
@@ -1944,7 +1968,7 @@ class TerminalUI:
         return f"\033[{code}m{text}\033[0m"
 
     def _banner(self) -> None:
-        print(self._paint("llm_raw " + VERSION, "1;36"))
+        print(self._paint("llm-raw " + VERSION, "1;36"))
         print(self._paint("OpenAI-compatible raw harness", "2"))
         print("Commands: /help, /tools, /skills, /skill <id>, /compact, /reset, /save, /load, /log, /quit")
         print()
@@ -2139,7 +2163,7 @@ class TerminalUI:
 
 
 def build_config(args: argparse.Namespace) -> dict[str, Any]:
-    path = Path(args.config).expanduser() if args.config else DEFAULT_CONFIG
+    path = Path(args.config).expanduser() if args.config else None
     config = load_config(path)
     endpoint = config.setdefault("endpoint", {})
     if args.base_url:
@@ -2203,8 +2227,12 @@ def make_client(config: dict[str, Any], logger: EventLogger | None) -> RawClient
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Portable raw OpenAI-compatible LLM harness.")
-    parser.add_argument("--config", help=f"YAML config path. Default: {DEFAULT_CONFIG}")
+    parser = argparse.ArgumentParser(
+        prog="llm-raw",
+        description="A small, transparent harness for OpenAI-compatible LLM endpoints.",
+        epilog=f"Config: {CONFIG_NAME} is discovered via --config, {CONFIG_ENV}, the current directory, or the module directory.",
+    )
+    parser.add_argument("--config", help=f"YAML config path. Default: ./{CONFIG_NAME}")
     parser.add_argument("--base-url", help="Endpoint root or /v1 URL")
     parser.add_argument("--model", help="Model id")
     parser.add_argument("--api-key", help="Bearer token (prefer api_key_env)")
@@ -2235,7 +2263,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--extra-body", help="JSON object merged into chat requests")
     parser.add_argument("--strict-openai", action="store_true", help="Omit llama.cpp/vLLM extensions")
     parser.add_argument("--no-color", action="store_true", help="Disable ANSI colors in the TUI")
-    parser.add_argument("--version", action="version", version=f"llm_raw {VERSION}")
+    parser.add_argument("--version", action="version", version=f"llm-raw {VERSION}")
     return parser.parse_args(argv)
 
 
