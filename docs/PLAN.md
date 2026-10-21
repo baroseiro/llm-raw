@@ -21,15 +21,15 @@ The imported baseline contains:
 
 - `llm_raw.py` — 2,381-line single-file harness
 - `llm_raw.yaml` — defaults with a syntax error in the `security` block
-- `SPEC_LLM_RAW.md`, `PLAN_LLM_RAW.md` — legacy docs that reference the
-  previous host project and its evaluation suite
+- `SPEC_LLM_RAW.md`, `PLAN_LLM_RAW.md` — legacy docs that reference an
+  external host project and its evaluation suite
 - no Git history, packaging, tests, README, license, or CI
 
 Initial audit findings:
 
 | Area | Finding | Action |
 |---|---|---|
-| Identity | Docstring says the file runs "without this skill" and references `eval_llm.py` | Remove all references; describe only `llm-raw` |
+| Identity | Docstring refers to an external skill host and an evaluation script | Remove all references; describe only `llm-raw` |
 | Naming | `llm_raw` used as product name | Product name `llm-raw`; keep `llm_raw` only as module/import name |
 | Packaging | No `pyproject.toml` | Add UV-managed setuptools project |
 | Config | `llm_raw.yaml`; default only next to the module; invalid YAML in `security` | Rename, add discovery order, fix YAML |
@@ -92,7 +92,7 @@ docs: add llm-raw specification and migration plan
 Acceptance:
 
 - Baseline commit contains the imported files unchanged.
-- Spec contains no references to the previous host project or evaluation suite.
+- Spec contains no references to external projects.
 - Plan lists every commit checkpoint used during delivery.
 
 ### Phase 1 — UV project and identity (milestone: installable app)
@@ -132,7 +132,7 @@ Acceptance:
 - `uv sync` completes.
 - `uv run llm-raw --help` shows `llm-raw`.
 - Importing `llm_raw` has no side effects.
-- No string in the repository references the previous host project.
+- No string in the repository references external projects.
 - The app runs with no config file using built-in defaults.
 
 ### Phase 2 — offline tests and runtime hardening (milestone: verified core)
@@ -217,7 +217,7 @@ ci: validate tests and builds with github actions
 Acceptance:
 
 - README commands work from a clean clone.
-- README contains no references to the previous host project.
+- README contains no references to external projects.
 - CI workflow is valid and runs offline tests.
 
 ### Phase 4 — packaging and release verification (milestone: shippable)
@@ -333,3 +333,4 @@ available.
 - Legacy docs and all host-project references are gone.
 - SPEC and PLAN match the delivered behavior.
 - Planned commits exist in Git history.
+

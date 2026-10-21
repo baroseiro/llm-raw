@@ -4,8 +4,9 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "llm-raw"
-version = "0.2.0"
+dynamic = ["version"]
 description = "A small, transparent, OpenAI-compatible LLM harness with tools, MCP, sessions, and a terminal UI."
+readme = "README.md"
 authors = [{ name = "llm-raw contributors" }]
 license = "MIT"
 license-files = ["LICENSE"]
@@ -37,6 +38,9 @@ dev = ["pytest>=8.0"]
 
 [tool.setuptools]
 py-modules = ["llm_raw"]
+
+[tool.setuptools.dynamic]
+version = { attr = "llm_raw.VERSION" }
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
