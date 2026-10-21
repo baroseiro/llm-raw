@@ -2,6 +2,7 @@
 
 Companion: [`SPEC.md`](SPEC.md)
 Baseline commit: `chore: import existing llm_raw harness baseline`
+Status: **delivered — v0.2.0**
 
 This plan re-initializes the folder as a standalone UV Python project and
 carries the existing single-file harness across with minimal structural change.
@@ -95,30 +96,30 @@ Acceptance:
 - Spec contains no references to external projects.
 - Plan lists every commit checkpoint used during delivery.
 
-### Phase 1 — UV project and identity (milestone: installable app)
+### Phase 1 — UV project and identity (done — `68549b1`)
 
 Tasks:
 
-- [ ] Add `pyproject.toml`:
+- [x] Add `pyproject.toml`:
   - distribution `llm-raw`, version `0.2.0`
   - `requires-python = ">=3.10"`
   - setuptools backend with `py-modules = ["llm_raw"]`
   - console script `llm-raw = "llm_raw:main"`
   - optional `yaml` extra, `dev` dependency group with pytest
-- [ ] Run `uv lock` and `uv sync`
-- [ ] Rename `llm_raw.yaml` → `llm-raw.yaml`
-- [ ] Fix invalid YAML in `security.redact_patterns`
-- [ ] Update module identity:
+- [x] Run `uv lock` and `uv sync`
+- [x] Rename `llm_raw.yaml` → `llm-raw.yaml`
+- [x] Fix invalid YAML in `security.redact_patterns`
+- [x] Update module identity:
   - docstring and version
   - `DEFAULT_CONFIG` / config discovery
   - MCP `clientInfo` name
   - TUI banner and argparse program name
   - save/session/log filenames where needed
-- [ ] Add `LLM_RAW_CONFIG` and current-directory config discovery
-- [ ] Remove legacy `SPEC_LLM_RAW.md` and `PLAN_LLM_RAW.md`
-- [ ] Add `.gitignore` for UV/Python/logs/sessions
-- [ ] Add MIT `LICENSE`
-- [ ] Verify `python -m py_compile llm_raw.py`, `uv run llm-raw --help`,
+- [x] Add `LLM_RAW_CONFIG` and current-directory config discovery
+- [x] Remove legacy `SPEC_LLM_RAW.md` and `PLAN_LLM_RAW.md`
+- [x] Add `.gitignore` for UV/Python/logs/sessions
+- [x] Add MIT `LICENSE`
+- [x] Verify `python -m py_compile llm_raw.py`, `uv run llm-raw --help`,
   `uv run llm-raw --version`, and `uv run llm-raw --list-skills`
 
 Commit:
@@ -135,11 +136,11 @@ Acceptance:
 - No string in the repository references external projects.
 - The app runs with no config file using built-in defaults.
 
-### Phase 2 — offline tests and runtime hardening (milestone: verified core)
+### Phase 2 — offline tests and runtime hardening (done — `f5620bd`)
 
 Tasks:
 
-- [ ] Add `tests/test_llm_raw.py` covering:
+- [x] Add `tests/test_llm_raw.py` covering:
   - YAML subset parser and the shipped `llm-raw.yaml`
   - environment expansion
   - URL normalization and headers
@@ -159,10 +160,10 @@ Tasks:
   - CLI smoke tests using `python -m`/`main` for `--version`, `--help`,
     `--list-skills`, and `--list-tools`
   - fake MCP stdio client exchange
-- [ ] Add a local fake HTTP endpoint for streaming/non-streaming transport tests
+- [x] Add a local fake HTTP endpoint for streaming/non-streaming transport tests
   (standard library only)
-- [ ] Fix defects found by the tests
-- [ ] Ensure all tests run offline and on Windows
+- [x] Fix defects found by the tests
+- [x] Ensure all tests run offline and on Windows
 
 Commit:
 
@@ -176,11 +177,11 @@ Acceptance:
 - No test writes outside a temporary directory.
 - No runtime dependency beyond the standard library is required.
 
-### Phase 3 — publication files (milestone: repository ready)
+### Phase 3 — publication files (done — `b38bc2e`, `58705d8`)
 
 Tasks:
 
-- [ ] Write `README.md`:
+- [x] Write `README.md`:
   - what the harness is and why it exists
   - feature matrix
   - install with UV and pip
@@ -194,12 +195,12 @@ Tasks:
   - Python API example
   - development, testing, and release instructions
   - license
-- [ ] Add GitHub Actions CI:
+- [x] Add GitHub Actions CI:
   - `uv sync --locked`
   - `uv run pytest`
   - `uv build`
   - matrix over Python 3.10 and 3.12
-- [ ] Add repository metadata polish: description, topics, and release checklist
+- [x] Add repository metadata polish: description, topics, and release checklist
   in `README.md`
 
 Commit:
@@ -220,22 +221,22 @@ Acceptance:
 - README contains no references to external projects.
 - CI workflow is valid and runs offline tests.
 
-### Phase 4 — packaging and release verification (milestone: shippable)
+### Phase 4 — packaging and release verification (done — final commit)
 
 Tasks:
 
-- [ ] `uv build` produces wheel and sdist
-- [ ] Install the wheel into a temporary virtual environment and run:
+- [x] `uv build` produces wheel and sdist
+- [x] Install the wheel into a temporary virtual environment and run:
   - `llm-raw --version`
   - `llm-raw --help`
   - `llm-raw --list-skills`
-- [ ] Confirm the wheel contains `llm_raw.py` and metadata
-- [ ] Run the app from a different working directory with:
+- [x] Confirm the wheel contains `llm_raw.py` and metadata
+- [x] Run the app from a different working directory with:
   - no config
   - `--config` pointing at the example
   - `LLM_RAW_CONFIG`
-- [ ] Verify JSONL logging and redaction with a fake endpoint
-- [ ] Final `git status` is clean and the log contains the planned commits
+- [x] Verify JSONL logging and redaction with a fake endpoint
+- [x] Final `git status` is clean and the log contains the planned commits
 
 Commit (only if fixes are needed):
 
@@ -267,7 +268,8 @@ Acceptance:
 | `test: add offline coverage for transport, tools, and sessions` | 2 | tests + fixes |
 | `docs: add publication-ready readme` | 3 | README |
 | `ci: validate tests and builds with github actions` | 3 | CI |
-| `fix: address packaging and release verification findings` | 4 | only if needed |
+| `test: verify packaged command and log redaction` | 4 | final integration check |
+| `docs: mark v0.2.0 delivery complete` | 4 | status and delivery record |
 
 Each commit must leave the tree runnable and `python -m py_compile llm_raw.py`
 passing.
@@ -330,7 +332,25 @@ available.
 - Optional YAML config is `llm-raw.yaml`; built-in defaults work without it.
 - All tests are offline, deterministic, and passing.
 - README is publication-ready for GitHub.
-- Legacy docs and all host-project references are gone.
+- Legacy docs and all external-project references are gone.
 - SPEC and PLAN match the delivered behavior.
 - Planned commits exist in Git history.
+
+---
+
+## 9. Delivery record (2026-10-21)
+
+- `uv run pytest` — 50 passed on CPython 3.10 and 3.14.
+- `uv run --extra yaml pytest` — 50 passed with the optional PyYAML parser.
+- `uv build` — wheel and sdist built for `llm-raw 0.2.0`.
+- Wheel installed into a clean temporary virtual environment:
+  - `llm-raw --version` → `llm-raw 0.2.0`
+  - `llm-raw --help` → correct `llm-raw` program name
+  - `llm-raw --list-skills --no-log` → `[]`
+  - `LLM_RAW_CONFIG` override → loaded successfully
+- Integration tests cover a local OpenAI-compatible endpoint, an HTTP MCP
+  server, a stdio MCP subprocess, JSONL logging, and API-key redaction.
+- Runtime dependencies: none; `PyYAML` remains optional.
+
+
 

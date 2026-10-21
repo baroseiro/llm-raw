@@ -1,6 +1,6 @@
 # llm-raw — Specification
 
-Status: **v0.2.0 target** (standalone single-file harness)
+Status: **v0.2.0 implemented** (standalone single-file harness)
 Project: `llm-raw`
 Runtime: Python 3.10+
 Distribution: Python package with a `llm-raw` console command
