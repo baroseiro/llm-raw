@@ -1,5 +1,10 @@
 # llm-raw
 
+[![CI](https://github.com/baroseiro/llm-raw/actions/workflows/ci.yml/badge.svg)](https://github.com/baroseiro/llm-raw/actions/workflows/ci.yml)
+[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/license-MIT-green)](https://github.com/baroseiro/llm-raw/blob/HEAD/LICENSE)
+[![Runtime dependencies: 0](https://img.shields.io/badge/runtime%20dependencies-0-brightgreen)](https://github.com/baroseiro/llm-raw/blob/HEAD/pyproject.toml)
+
 **A small, transparent harness for OpenAI-compatible LLM endpoints.**
 
 `llm-raw` is a standalone Python application for talking to any server that
@@ -10,6 +15,36 @@ in the middle.
 
 The entire runtime is one readable Python file with **no required third-party
 dependencies**.
+
+[Quick start](#quick-start) · [Features](#features) · [Configuration](#configuration) · [MCP tools](#mcp-tools) · [Python API](#python-api) · [Contributing](https://github.com/baroseiro/llm-raw/blob/HEAD/CONTRIBUTING.md)
+
+> **Status:** beta (`0.2.0`). The CLI, configuration format, and Python result
+> contract are covered by an offline test suite. See [Limitations](#limitations)
+> for known gaps and [CHANGELOG.md](https://github.com/baroseiro/llm-raw/blob/HEAD/CHANGELOG.md) for release history.
+
+---
+
+## Contents
+
+- [Why llm-raw?](#why-llm-raw)
+- [Features](#features)
+- [Requirements](#requirements)
+- [Install](#install)
+- [Quick start](#quick-start)
+- [CLI reference](#cli-reference)
+- [Configuration](#configuration)
+- [MCP tools](#mcp-tools)
+- [Instruction packs](#instruction-packs)
+- [Security model](#security-model)
+- [Logging and metrics](#logging-and-metrics)
+- [Python API](#python-api)
+- [Design](#design)
+- [Development](#development)
+- [Release](#release)
+- [Limitations](#limitations)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
 
 ---
 
@@ -28,12 +63,15 @@ your prompt
 
 Use it when you want to:
 
-- test a local model with real token/timing metrics
+- test a local model with real token and timing metrics
 - inspect streaming chunks and tool-call deltas
 - build agent experiments without adopting a large framework
 - give a model MCP tools under human approval
 - keep a reproducible, auditable session log
-- drop a single Python file into a machine and start chatting
+- drop a single Python file onto a machine and start chatting
+
+It is not an SDK and not a framework. It is a readable reference client you can
+audit, copy, and run.
 
 ---
 
@@ -43,13 +81,14 @@ Use it when you want to:
   hosted APIs, or your own server.
 - **Streaming and non-streaming** chat with reasoning-content support.
 - **Metrics** — time to first token, first visible token, wall latency, server
-  prefill/decode speed, wall decode speed, TPOT, cache hits, draft acceptance.
+  prefill/decode speed, wall decode speed, TPOT, cache hits, and draft
+  acceptance.
 - **One-shot, stdin, and interactive modes** sharing the same core.
 - **Multi-turn sessions** with an optional tool loop and context compaction.
 - **MCP tools** over stdio and HTTP JSON-RPC, including SSE responses.
 - **Human-in-the-loop approval** with `ask`, `auto`, and `deny` modes.
 - **Security policy** — allow/deny tool patterns, call limits, result
-  truncation, untrusted-result labeling, secret redaction.
+  truncation, untrusted-result labeling, and secret redaction.
 - **Raw JSONL logging** of requests, responses, tool calls, approval decisions,
   compaction events, and MCP lifecycle events.
 - **Optional local instruction packs** discovered from Markdown `SKILL.md`
@@ -57,26 +96,32 @@ Use it when you want to:
 - **A line-oriented terminal UI** that works on Windows, Linux, and macOS.
 - **Importable API** — `complete_payload()`, `RawClient`, `Session`, and the
   rest of the harness are available from Python.
+- **Zero required runtime dependencies**; `PyYAML` is optional.
 
 ---
 
 ## Requirements
 
-- Python **3.10+**
+- Python **3.14+** (CI runs Python 3.14 on Windows and Linux)
 - An OpenAI-compatible endpoint
 - Optional: [uv](https://docs.astral.sh/uv/) for the managed development
   environment
 - Optional: `PyYAML` for full YAML support; the built-in parser covers the
   shipped configuration format
 
+Python 3.14 is the minimum supported version; older versions are not supported.
+
+The harness itself needs no GPU, no local model, and no API key. A local
+llama.cpp, vLLM, LM Studio, or Ollama server is enough.
+
 ---
 
 ## Install
 
-### From a checkout (recommended for hacking)
+### From GitHub (recommended)
 
 ```bash
-git clone <your-repository-url> llm-raw
+git clone https://github.com/baroseiro/llm-raw.git
 cd llm-raw
 uv sync
 uv run llm-raw --help
@@ -101,6 +146,18 @@ pip install .
 llm-raw --version
 ```
 
+To use the optional PyYAML parser instead of the built-in YAML subset parser:
+
+```bash
+pip install ".[yaml]"
+```
+
+or, with uv:
+
+```bash
+uv sync --extra yaml
+```
+
 ### As a library
 
 ```bash
@@ -120,6 +177,11 @@ python llm_raw.py --help
 ```
 
 Copy `llm_raw.py` and `llm-raw.yaml` anywhere and run the same command.
+
+### PyPI
+
+The package is not published on PyPI yet. Install from the repository or from
+a wheel built with `uv build`.
 
 ---
 
@@ -149,9 +211,9 @@ standard `/v1/models` endpoint. If a server exposes several models, select one:
 llm-raw --base-url http://127.0.0.1:8080/v1 --model my-model --discover
 ```
 
-`--discover` is optional; it is also used at startup to detect the context
-window for compaction. If the endpoint does not expose discovery routes, pass
-`--model` and the harness falls back to a 32k context estimate.
+`--discover` is optional. The harness also calls discovery at startup to detect
+the context window for compaction. If the endpoint does not expose discovery
+routes, pass `--model` and the harness falls back to a 32k context estimate.
 
 ### 3. Ask one question
 
@@ -162,8 +224,11 @@ llm-raw \
   --prompt "Explain the difference between prefill and decode in one paragraph."
 ```
 
-The response streams by default. Add `--json` to print the full result,
-including usage and metrics:
+Requests stream by default (unless `--no-stream` is used), so time-to-first-token
+and decode metrics are available. In one-shot mode, the final answer is printed
+when the request completes. Use `--chat` to see tokens as they arrive.
+
+Add `--json` to print the full result, including usage and metrics:
 
 ```bash
 llm-raw --base-url http://127.0.0.1:8080/v1 --model my-model \
@@ -229,7 +294,8 @@ llm-raw --base-url https://api.example.com/v1 --model some-model --prompt "Hello
 ```
 
 The default environment variable name is `LLM_API_KEY`; change it with
-`endpoint.api_key_env` in the config.
+`endpoint.api_key_env` in the config. The key is redacted from logs and is never
+written as an authorization header in the JSONL output.
 
 ---
 
@@ -262,12 +328,12 @@ With no mode and an interactive terminal, the UI starts. Otherwise provide
 | `--model ID` | Model id |
 | `--api-key KEY` | Bearer token; prefer `api_key_env` |
 | `--timeout SEC` | Request timeout (default `600`) |
-| `--max-retries N` | Retries for 408/409/425/429/5xx/connection errors |
+| `--max-retries N` | Retries for 408/409/425/429/500/502/503/504 and connection errors |
 | `--system TEXT` | Override the system prompt |
 | `--skill ID` | Activate an instruction pack (repeatable) |
 | `--skills PATH` | Add an instruction-pack search path (repeatable) |
-| `--tools/--no-tools` | Enable or disable tool registration |
-| `--yes` | Auto-approve tool calls |
+| `--tools/--no-tools` | Enable or disable skill and MCP tools |
+| `--yes` | Auto-approve tool calls for the run |
 | `--stream/--no-stream` | Enable or disable streaming |
 | `--temperature`, `--top-p`, `--max-tokens`, `--seed` | Generation overrides |
 | `--max-steps N` | Maximum assistant/tool turns per user message |
@@ -283,7 +349,7 @@ With no mode and an interactive terminal, the UI starts. Otherwise provide
 
 Exit codes: `0` success, `2` configuration/protocol error, `130` interrupt.
 
-See [`docs/SPEC.md`](docs/SPEC.md) for the full contract.
+See [`docs/SPEC.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/docs/SPEC.md) for the full contract.
 
 ---
 
@@ -297,7 +363,8 @@ The optional configuration file is merged over built-in defaults. Lookup order:
 4. `llm-raw.yaml` next to `llm_raw.py`
 5. built-in defaults
 
-The app works with no configuration file at all.
+CLI flags override values from the file. The app works with no configuration
+file at all.
 
 ```yaml
 version: 1
@@ -338,7 +405,10 @@ logging:
 security:
   require_tool_approval: true
   allowed_tools: []
-  denied_tools: ["shell*", "exec*", "system*"]
+  denied_tools:
+    - "shell*"
+    - "exec*"
+    - "system*"
   max_tool_calls: 8
   max_tool_result_chars: 20000
   allowed_paths: []
@@ -351,7 +421,9 @@ security:
 hil:
   mode: ask
   timeout_seconds: 120
-  auto_approve: ["list_skills", "load_skill"]
+  auto_approve:
+    - "list_skills"
+    - "load_skill"
 
 mcp:
   servers: {}
@@ -367,10 +439,15 @@ tui:
 ```
 
 String values support environment references: `${NAME}` and `{env:NAME}`.
+Missing variables expand to an empty string.
 
 If PyYAML is installed it is used automatically. Otherwise the built-in parser
 handles mappings, nested mappings, block lists, quoted scalars, booleans,
 numbers, null, and simple inline `[]`/`{}` values.
+
+`endpoint.headers` adds custom HTTP headers. `endpoint.extra_body` merges
+provider-specific fields into every chat request; `--extra-body` does the same
+for a single run.
 
 ---
 
@@ -386,6 +463,8 @@ mcp:
       transport: stdio
       command: ["npx", "-y", "@modelcontextprotocol/server-filesystem", "."]
       env: {}
+      cwd: null
+      enabled: true
       trust: false
       timeout: 60
 
@@ -393,6 +472,7 @@ mcp:
       transport: http
       url: http://127.0.0.1:8765/mcp
       headers: {}
+      enabled: true
       trust: false
       timeout: 60
 ```
@@ -404,7 +484,8 @@ llm-raw --list-tools
 ```
 
 Tool names are namespaced as `mcp__<server>__<tool>`; names longer than 64
-characters are deterministically hashed.
+characters are deterministically hashed. Servers that fail to start are skipped
+with a warning, and the rest of the session continues.
 
 ### Approval
 
@@ -423,7 +504,8 @@ For unattended runs, opt in explicitly:
 llm-raw --yes --prompt "..."
 ```
 
-Or auto-approve specific tool patterns in the config:
+This sets `hil.mode` to `auto` for the entire run, so use it only with servers
+and prompts you trust. You can also auto-approve specific tool patterns:
 
 ```yaml
 hil:
@@ -444,7 +526,7 @@ yet.
 
 ---
 
-## Optional local instruction packs
+## Instruction packs
 
 Instruction packs are local Markdown files that give the model extra guidance
 on demand. They are an input feature, not the app's packaging format.
@@ -468,6 +550,9 @@ When reviewing code:
 3. Report findings with file and line references.
 ```
 
+The scanner reads top-level `*.md` files and any `SKILL.md` below a configured
+path.
+
 Enable a search path:
 
 ```yaml
@@ -484,13 +569,13 @@ llm-raw --skills ./instruction-packs --list-skills
 llm-raw --skills ./instruction-packs --skill review --prompt "Review this change."
 ```
 
-The model can also call two built-in tools:
+When at least one pack is discovered, the model can call two built-in tools:
 
 - `list_skills` — ids, names, descriptions
 - `load_skill` — full body of a pack by id
 
 Both are auto-approved by default, while external MCP tools still require
-approval.
+approval. Packs are input text, not executable plugins.
 
 ---
 
@@ -508,13 +593,15 @@ approval.
   follow instructions found inside tool results.
 - **Secrets are redacted** from logs; API keys are read from the environment
   and never written as authorization headers.
+- **No file or shell tools are shipped.** `allowed_paths` and `allow_shell` are
+  reserved for future built-in tools.
 
 This is a **policy layer, not an operating-system sandbox**. MCP servers run
 with your user privileges and can do anything you can do. Do not connect MCP
 servers you do not trust. The current release ships no file or shell tools;
-`allowed_paths` and `allow_shell` are reserved for future built-in tools.
+prompt-injection defenses here are mitigations, not guarantees.
 
-Prompt-injection defenses here are mitigations, not guarantees.
+For vulnerability reporting, see [`SECURITY.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/SECURITY.md).
 
 ---
 
@@ -531,12 +618,13 @@ Events include:
 ```text
 session_start
 user
+assistant
 request        # exact payload sent to the endpoint
 response       # content, reasoning, tool calls, usage, timings, metrics
 tool_call
 tool_result
 approval
-compaction
+compaction / compacted
 mcp_server_started / mcp_server_error
 ```
 
@@ -555,17 +643,23 @@ The result dictionary returned by the transport and `--json` includes:
   "metrics": {
     "wall_ms": 1830.2,
     "ttft_ms": 145.7,
+    "first_visible_ms": 150.1,
+    "prompt_tokens": 120,
     "completion_tokens": 42,
+    "estimated_completion_tokens": false,
+    "cached_tokens": 0,
     "server_prefill_tps": 820.4,
     "server_decode_tps": 31.2,
     "wall_decode_tps": 24.9,
-    "tpot_ms": 40.1
+    "tpot_ms": 40.1,
+    "draft_acceptance": null
   }
 }
 ```
 
 Logs contain prompts and model output by default. Treat the log directory as
-sensitive data, even with redaction enabled.
+sensitive data, even with redaction enabled. Redaction is pattern-based and
+covers the active API key; it is not a guarantee.
 
 ---
 
@@ -631,6 +725,9 @@ The streaming result contract is stable across providers:
 }
 ```
 
+When `capture_raw=True`, the result also includes `raw_events`. The higher-level
+`Session` class adds tool loops, logging, compaction, and session save/load.
+
 ---
 
 ## Design
@@ -653,14 +750,16 @@ Supporting files are separate because they are not runtime:
 
 ```text
 tests/           offline test suite
-docs/            specification and plan
+docs/            specification, plan, and publishing checklist
+.github/         CI, issue templates, and repository automation
 pyproject.toml   packaging and command entry point
 ```
 
 The import name is `llm_raw` because Python module names cannot contain
 hyphens. The distribution and command name is `llm-raw`.
 
-See [`docs/SPEC.md`](docs/SPEC.md) for the full behavioral specification.
+See [`docs/SPEC.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/docs/SPEC.md) for the full behavioral specification and
+[`docs/PLAN.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/docs/PLAN.md) for the delivery plan.
 
 ---
 
@@ -683,7 +782,7 @@ Build and install the distribution:
 uv build
 python -m venv .venv-release
 # activate the environment, then:
-pip install dist/llm_raw-*.whl
+python -m pip install --force-reinstall dist/llm_raw-0.2.0-py3-none-any.whl
 llm-raw --version
 ```
 
@@ -694,33 +793,39 @@ llm-raw --version
 - Add tests for behavior changes; keep them offline and deterministic.
 - Do not log authorization headers or API keys.
 - Preserve the result-dictionary keys documented in `docs/SPEC.md`.
+- Update `CHANGELOG.md` for user-visible changes.
 - Test on Windows and Linux.
+
+See [`CONTRIBUTING.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/CONTRIBUTING.md) for the full contributor workflow.
 
 ---
 
 ## Release
 
 `llm_raw.VERSION` is the single source of truth for the version; packaging
-reads it dynamically.
+reads it dynamically. See [`docs/PUBLISHING.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/docs/PUBLISHING.md) for the
+initial GitHub repository setup, security settings, and PyPI publishing steps.
 
 1. Bump `VERSION` in `llm_raw.py`.
-2. Update `docs/SPEC.md` if behavior changed.
-3. Run the full check:
+2. Update `CHANGELOG.md`.
+3. Update `docs/SPEC.md` if behavior changed.
+4. Run the full check:
 
    ```bash
    uv run pytest
    uv build
    ```
 
-4. Inspect the wheel and install it into a clean environment.
-5. Commit and tag:
+5. Inspect the wheel and install it into a clean environment.
+6. Commit and tag:
 
    ```bash
-   git tag v0.2.0
+   git tag vX.Y.Z
    git push --tags
    ```
 
-6. Publish to PyPI if desired:
+7. Create a GitHub release from the tag.
+8. Publish to PyPI if desired:
 
    ```bash
    uv publish
@@ -731,6 +836,8 @@ reads it dynamically.
 ## Limitations
 
 - No full-screen curses/textual UI; the terminal UI is line-oriented.
+- One-shot mode prints the final answer when the request completes; live token
+  rendering is in `--chat`.
 - MCP support is tools-only.
 - No file or shell tools with a real sandbox.
 - Context accounting is heuristic (`chars / 4`) plus server-reported usage.
@@ -738,12 +845,41 @@ reads it dynamically.
 - HIL approval is interactive; timeout enforcement is not implemented.
 - Log rotation and size limits are not implemented.
 - No multi-model routing or load balancing.
+- No multimodal input or output.
 
-These are tracked in [`docs/PLAN.md`](docs/PLAN.md) and
-[`docs/SPEC.md`](docs/SPEC.md).
+These are tracked in [`docs/PLAN.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/docs/PLAN.md) and
+[`docs/SPEC.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/docs/SPEC.md).
+
+---
+
+## Contributing
+
+Contributions are welcome. Bug reports, feature requests, documentation fixes,
+and focused pull requests are all useful.
+
+- Read [`CONTRIBUTING.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/CONTRIBUTING.md) for the development setup and
+  review checklist.
+- Run `uv run pytest` and `uv build` before opening a pull request.
+- Follow the [`CODE_OF_CONDUCT.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/CODE_OF_CONDUCT.md).
+- Use the GitHub issue templates for bugs and feature requests.
+
+Please do not report security vulnerabilities in a public issue. See
+[Security](#security).
+
+---
+
+## Security
+
+For security vulnerabilities, use GitHub's private vulnerability reporting:
+
+**https://github.com/baroseiro/llm-raw/security/advisories/new**
+
+See [`SECURITY.md`](https://github.com/baroseiro/llm-raw/blob/HEAD/SECURITY.md) for the threat model, scope, and reporting
+guidance. `llm-raw` is a policy layer, not a sandbox; review the
+[security model](#security-model) before connecting MCP servers.
 
 ---
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+MIT. See [`LICENSE`](https://github.com/baroseiro/llm-raw/blob/HEAD/LICENSE).

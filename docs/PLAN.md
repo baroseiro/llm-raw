@@ -54,10 +54,20 @@ built-in parser does not parse it. It will be replaced with a valid block list.
 
 ```text
 llm-raw/
-├── .github/workflows/ci.yml
+├── .github/
+│   ├── workflows/ci.yml
+│   ├── ISSUE_TEMPLATE/
+│   ├── dependabot.yml
+│   └── PULL_REQUEST_TEMPLATE.md
+├── .editorconfig
+├── .gitattributes
 ├── .gitignore
+├── CHANGELOG.md
+├── CODE_OF_CONDUCT.md
+├── CONTRIBUTING.md
 ├── LICENSE
 ├── README.md
+├── SECURITY.md
 ├── pyproject.toml
 ├── uv.lock
 ├── llm-raw.yaml
@@ -65,8 +75,9 @@ llm-raw/
 ├── tests/
 │   └── test_llm_raw.py
 └── docs/
-    ├── SPEC.md
-    └── PLAN.md
+    ├── PLAN.md
+    ├── PUBLISHING.md
+    └── SPEC.md
 ```
 
 No `src/` split and no package directory. The single-module layout is a product
@@ -102,7 +113,7 @@ Tasks:
 
 - [x] Add `pyproject.toml`:
   - distribution `llm-raw`, version `0.2.0`
-  - `requires-python = ">=3.10"`
+  - `requires-python = ">=3.14"`
   - setuptools backend with `py-modules = ["llm_raw"]`
   - console script `llm-raw = "llm_raw:main"`
   - optional `yaml` extra, `dev` dependency group with pytest
@@ -199,7 +210,7 @@ Tasks:
   - `uv sync --locked`
   - `uv run pytest`
   - `uv build`
-  - matrix over Python 3.10 and 3.12
+  - matrix over Python 3.14
 - [x] Add repository metadata polish: description, topics, and release checklist
   in `README.md`
 
@@ -340,7 +351,7 @@ available.
 
 ## 9. Delivery record (2026-10-21)
 
-- `uv run pytest` — 50 passed on CPython 3.10 and 3.14.
+- `uv run pytest` — 50 passed on CPython 3.14.
 - `uv run --extra yaml pytest` — 50 passed with the optional PyYAML parser.
 - `uv build` — wheel and sdist built for `llm-raw 0.2.0`.
 - Wheel installed into a clean temporary virtual environment:
@@ -351,6 +362,22 @@ available.
 - Integration tests cover a local OpenAI-compatible endpoint, an HTTP MCP
   server, a stdio MCP subprocess, JSONL logging, and API-key redaction.
 - Runtime dependencies: none; `PyYAML` remains optional.
+
+---
+
+## 10. Publication follow-up (2026-10-30)
+
+- README restructured for GitHub: badges, table of contents, faster quick start,
+  explicit one-shot streaming behavior, and links to contributor/security docs.
+- Added `CONTRIBUTING.md`, `SECURITY.md`, `CHANGELOG.md`,
+  `CODE_OF_CONDUCT.md`, `docs/PUBLISHING.md`, issue templates, a pull request
+  template, and Dependabot configuration.
+- Added project URLs and Python 3.14 metadata to `pyproject.toml`.
+- Set CI to Python 3.14 on Windows and Linux and upload the built distribution.
+- Raised the supported baseline to Python 3.14+ and kept `master` as the only
+  long-lived branch.
+- `--skills` now appends search paths instead of replacing configured paths.
+- `uv run pytest` — 51 passed on CPython 3.14.
 
 
 

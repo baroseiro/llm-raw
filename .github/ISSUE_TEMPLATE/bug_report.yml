@@ -1,0 +1,93 @@
+name: Bug report
+description: Report a reproducible problem with llm-raw.
+title: "[bug]: "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a bug.
+
+        **Do not include API keys, bearer tokens, private prompts, or other
+        secrets.** Redact logs before pasting them. For security
+        vulnerabilities, use the private advisory link in the issue chooser
+        instead of this form.
+
+  - type: input
+    id: version
+    attributes:
+      label: llm-raw version
+      description: Output of `llm-raw --version`.
+      placeholder: llm-raw 0.2.0
+    validations:
+      required: true
+
+  - type: dropdown
+    id: os
+    attributes:
+      label: Operating system
+      options:
+        - Windows
+        - Linux
+        - macOS
+        - Other
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      placeholder: "3.14.0"
+    validations:
+      required: true
+
+  - type: input
+    id: endpoint
+    attributes:
+      label: Endpoint or provider
+      description: For example llama.cpp, vLLM, LM Studio, Ollama, or a hosted API. Do not include secrets.
+    validations:
+      required: true
+
+  - type: textarea
+    id: command
+    attributes:
+      label: Command or snippet
+      description: The exact command or Python code that reproduces the problem.
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs or traceback
+      description: Paste redacted JSONL events or the traceback.
+      render: text
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Checklist
+      options:
+        - label: I searched existing issues and did not find a duplicate.
+          required: true
+        - label: I removed API keys, tokens, and private prompts from this report.
+          required: true

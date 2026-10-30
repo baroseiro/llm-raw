@@ -2,7 +2,7 @@
 
 Status: **v0.2.0 implemented** (standalone single-file harness)
 Project: `llm-raw`
-Runtime: Python 3.10+
+Runtime: Python 3.14+
 Distribution: Python package with a `llm-raw` console command
 Implementation: one module, `llm_raw.py` (the underscore is required for Python imports; the product and command name is `llm-raw`)
 
@@ -147,7 +147,7 @@ reports that `--prompt`, `--stdin`, or `--chat` is required.
 | `--model ID` | Model override |
 | `--api-key KEY` | Bearer token; prefer `api_key_env` |
 | `--timeout SEC` | Request timeout |
-| `--max-retries N` | Retry count for 429/5xx/connection errors |
+| `--max-retries N` | Retry count for 408/409/425/429/500/502/503/504 and connection errors |
 | `--system TEXT` | Override the system prompt |
 | `--skill ID` | Activate a local skill (repeatable) |
 | `--skills PATH` | Add a skill search path (repeatable) |
@@ -327,8 +327,8 @@ request shape. `strict_openai` removes `chat_template_kwargs`, `cache_prompt`,
 }
 ```
 
-The transport retries 408/409/425/429/5xx and connection errors. Normal 4xx
-protocol errors are not retried. `LLMError` is the public error type.
+The transport retries 408/409/425/429/500/502/503/504 and connection errors.
+Normal 4xx protocol errors are not retried. `LLMError` is the public error type.
 
 ---
 
@@ -585,7 +585,7 @@ point. Importing the module has no side effects.
 
 ## 18. Portability and packaging
 
-- Python 3.10+; standard library only (PyYAML optional).
+- Python 3.14+; standard library only (PyYAML optional).
 - Windows, Linux, macOS.
 - Managed by UV: `uv sync`, `uv run llm-raw`, `uv run pytest`, `uv build`.
 - Installed console command: `llm-raw`.

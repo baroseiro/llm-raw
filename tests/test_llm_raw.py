@@ -333,6 +333,16 @@ def test_build_config_cli_overrides() -> None:
     assert config["hil"]["mode"] == "auto"
 
 
+def test_build_config_appends_skill_paths(tmp_path: Path) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("skills:\n  paths:\n    - base\n", encoding="utf-8")
+    args = llm_raw.parse_args(
+        ["--config", str(config_path), "--skills", "extra", "--skills", "base"]
+    )
+    config = llm_raw.build_config(args)
+    assert config["skills"]["paths"] == ["base", "extra"]
+
+
 # ---------------------------------------------------------------------------
 # URL, transport, SSE, retries, metrics
 # ---------------------------------------------------------------------------

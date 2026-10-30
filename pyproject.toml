@@ -10,22 +10,28 @@ readme = "README.md"
 authors = [{ name = "llm-raw contributors" }]
 license = "MIT"
 license-files = ["LICENSE"]
-requires-python = ">=3.10"
-keywords = ["llm", "openai", "harness", "mcp", "terminal", "agent"]
+requires-python = ">=3.14"
+keywords = ["llm", "openai", "openai-compatible", "harness", "mcp", "llama.cpp", "vllm", "ollama", "terminal", "agent"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "Environment :: Console",
   "Intended Audience :: Developers",
   "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
-  "Programming Language :: Python :: 3.10",
-  "Programming Language :: Python :: 3.11",
-  "Programming Language :: Python :: 3.12",
-  "Programming Language :: Python :: 3.13",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.14",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
   "Topic :: Software Development :: Testing",
   "Topic :: Utilities",
 ]
 dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/baroseiro/llm-raw"
+Repository = "https://github.com/baroseiro/llm-raw"
+Issues = "https://github.com/baroseiro/llm-raw/issues"
+Changelog = "https://github.com/baroseiro/llm-raw/blob/HEAD/CHANGELOG.md"
+Security = "https://github.com/baroseiro/llm-raw/security/policy"
 
 [project.optional-dependencies]
 yaml = ["PyYAML>=6.0"]

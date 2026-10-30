@@ -2,7 +2,7 @@
 """llm-raw: a small, transparent harness for OpenAI-compatible LLM endpoints.
 
 The runtime is intentionally one file. Copy ``llm_raw.py`` and, optionally,
-``llm-raw.yaml`` into a directory and run it with Python 3.10 or newer.
+``llm-raw.yaml`` into a directory and run it with Python 3.14 or newer.
 
 Features:
 
@@ -2211,7 +2211,12 @@ def build_config(args: argparse.Namespace) -> dict[str, Any]:
     if args.yes:
         config.setdefault("hil", {})["mode"] = "auto"
     if args.skills:
-        config.setdefault("skills", {})["paths"] = args.skills
+        skills_config = config.setdefault("skills", {})
+        paths = list(skills_config.get("paths") or [])
+        for path in args.skills:
+            if path not in paths:
+                paths.append(path)
+        skills_config["paths"] = paths
     return config
 
 
